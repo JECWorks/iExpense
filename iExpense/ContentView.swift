@@ -8,30 +8,41 @@
 
 import SwiftUI
 
-struct SecondView: View {
-    @Environment(\.dismiss) var dismiss
+struct ExpenseItem {
     let name: String
-    var body: some View {
-        Button("Dismiss"){
-            dismiss()
-        }
-    }
+    let type: String
+    let amount: Double
+}
+
+@Observable
+class Expenses {
+    var items = [ExpenseItem]()
 }
 
 struct ContentView: View {
-@State private var showingSheet: Bool = false
+    @State private var expenses = Expenses()
     
     var body: some View {
-        VStack {
-            Button("Show Sheet") {
-                showingSheet.toggle()
+        NavigationStack {
+            List {
+                ForEach(expenses.items, id: \.name) { item in
+                    Text(item.name)
+                }
+                .onDelete(perform: removeItems)
             }
-            .sheet(isPresented: $showingSheet) {
-                SecondView(name: "@WinterEC")
+            .navigationTitle("iExpense")
+            .toolbar {
+                Button("Add Expense", systemImage: "plus") {
+                    let expense = ExpenseItem(name: "Test", type: "Personal", amount: 5.0)
+                    expenses.items.append(expense)
+                }
             }
-
         }
 
+    }
+    
+    func removeItems(at offsets: IndexSet) {
+        expenses.items.remove(atOffsets: offsets)
     }
 }
 
