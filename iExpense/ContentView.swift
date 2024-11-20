@@ -13,11 +13,12 @@ struct ExpenseItem: Identifiable, Codable {
     let name: String
     let type: String
     let amount: Double
+    let date: Date
 }
 
-@Observable
-class Expenses {
-    var items = [ExpenseItem]() {
+//@Observable
+class Expenses: ObservableObject {
+    @Published var items = [ExpenseItem]() {
         didSet {
             if let encoded = try? JSONEncoder().encode(items) {
                 UserDefaults.standard.set(encoded, forKey: "Items")
@@ -38,44 +39,69 @@ class Expenses {
 }
 
 struct ContentView: View {
-    @State private var expenses = Expenses()
-    
+    @StateObject private var expenses = Expenses()
     @State private var showingAddExpense = false
+    @State private var showingEditExpense = false
+    @State private var expenseToEdit: ExpenseItem?
     
     var body: some View {
         NavigationStack {
             List {
                 ForEach(expenses.items) { item in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(item.name)
-                                .font(.headline)
-                            Text(item.type)
-                                .font(.subheadline)
+                    VStack(alignment: .leading) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.name)
+                                    .font(.headline)
+                                Text(item.type)
+                                    .font(.subheadline)
+                            }
+                            Spacer()
+                            Text(item.amount, format: .currency(code: "USD"))
                         }
-                        Spacer()
+                        Text(item.date, style: .date)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .swipeActions {
+                        Button("Edit") {
+                            expenseToEdit = item
+                            showingEditExpense = true
+                        }
+                        .tint(.blue)
                         
-                        Text(item.amount, format: .currency(code: "USD"))
-                        
+                        Button("Delete", role: .destructive) {
+                            deleteItem(item)
+                        }
                     }
                 }
-                .onDelete(perform: removeItems)
             }
             .navigationTitle("iExpense")
             .toolbar {
-                Button("Add Expense", systemImage: "plus") {
+                Button {
                     showingAddExpense = true
+                } label: {
+                    Label("Add Expense", systemImage: "plus")
                 }
             }
             .sheet(isPresented: $showingAddExpense) {
                 AddView(expenses: expenses)
             }
+            .sheet(isPresented: $showingEditExpense) {
+                if let expenseToEdit = expenseToEdit {
+                    EditExpenseView(expense: expenseToEdit, expenses: expenses)
+                }
+            }
         }
-
     }
     
-    func removeItems(at offsets: IndexSet) {
-        expenses.items.remove(atOffsets: offsets)
+//    func removeItems(at offsets: IndexSet) {
+//        expenses.items.remove(atOffsets: offsets)
+//    }
+    func deleteItem(_ item: ExpenseItem) {
+        if let index = expenses.items.firstIndex(where: { $0.id == item.id}) {
+            expenses.items.remove(at: index)
+        }
     }
 }
 
